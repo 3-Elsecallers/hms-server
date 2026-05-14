@@ -1,0 +1,23 @@
+services:
+  # hms-db:
+  #   image: postgres:15
+  #   environment:
+  #     POSTGRES_PASSWORD: password
+  
+  ehrbase:
+    image: ehrbase/ehrbase:latest
+    ports:
+      - "8080:8080"
+    environment:
+      - SECURITY_AUTHTYPE=OAUTH
+      - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUERURI=[https://your-hms-api.com]
+      - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI=http://hms-api:3000/.well-known/jwks.json
+      - SECURITY_OAUTH2USERROLE=realm_access.roles
+      - SECURITY_OAUTH2ADMINROLE=realm_access.roles
+      
+  # hms-api:
+  #   build: .
+  #   depends_on:
+  #     - hms-db
+  #     - ehrbase
+  #   env_file: .env

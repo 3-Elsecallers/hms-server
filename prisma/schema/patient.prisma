@@ -1,0 +1,10 @@
+model Patient {
+  id        String   @id @default(uuid())
+  firstName String
+  lastName  String
+  birthDate DateTime
+  gender    String
+  // This is the bridge to openEHR
+  ehrId     String?  @unique
+  createdAt DateTime @default(now())
+}

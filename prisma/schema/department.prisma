@@ -1,0 +1,70 @@
+model Department {
+  id           String           @id @default(uuid())
+  name         String
+  about        String
+  hod          String
+  specialists  String[]
+  doctors      String[]
+  nurses       String[]
+  supportStaff String[]
+  status       DepartmentStatus @default(ACTIVE)
+  image        String
+  createdBy    String
+  updatedBy    String
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @default(now())
+  treatments   Treatment[]
+  wards        Ward[]
+
+  // TODO: add Specialist, Doctors, Nurses and Support Staff relations
+}
+
+model Treatment {
+  id           String   @id @default(uuid())
+  departmentId String
+  name         String
+  description  String
+  createdBy    String
+  updatedBy    String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @default(now())
+
+  department Department @relation(fields: [departmentId], references: [id])
+}
+
+model Ward {
+  id           String   @id @default(uuid())
+  name         String
+  floor        Int
+  departmentId String?
+  createdBy    String
+  updatedBy    String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @default(now())
+  beds         Bed[]
+
+  department Department? @relation(fields: [departmentId], references: [id])
+}
+
+model Bed {
+  id        String    @id @default(uuid())
+  wardId    String
+  bedNumber Int
+  status    BedStatus @default(EMPTY)
+  createdBy String
+  updatedBy String
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @default(now())
+
+  ward Ward @relation(fields: [wardId], references: [id])
+}
+
+enum DepartmentStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum BedStatus {
+  EMPTY
+  IN_USE
+}
