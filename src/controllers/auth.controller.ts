@@ -4,11 +4,12 @@ import * as jose from "jose";
 import "dotenv/config";
 
 import { prisma } from '../lib/prisma';
-import { IEmailVerificationEvent, IUserPayload } from "../types/custom";
+import { IEmailVerificationEvent, IPasswordResetEvent, IUserPayload } from "../types/custom";
 import { AuthUtils } from "../utils/AuthUtils";
 import { logAuditEvent } from "../services/audit.service";
 import { signInValidation, signUpValidation, updateProfileValidation } from "../validation/authValidation";
-import { sendEmailVerificationEvent } from "../kafka/userManagementProducer";
+import { sendEmailVerificationEvent, sendPasswordResetEvent } from "../kafka/userManagementProducer";
+import { generatePasswordResetToken } from "../utils/generateToken";
 
 const signUp = async (req: Request, res: Response) => {
   try {
@@ -317,6 +318,75 @@ const sendEmailVerification = async (userId: string, email: string) => {
   // TODO: Clear verification codes from database upon expiry
 }
 
+const sendPasswordResetLink = async (req: Request, res: Response) => {
+  try {
+    const { email } = req.body;
+
+    const user = await prisma.user.findUnique({ where: { email } });
+    if (!user) {
+      return res.status(404).json({ error: "User does not exist" });
+    }
+
+    const payload: IUserPayload = {
+      id: user.id,
+      name: `${user.firstName} ${user.lastName}`,
+      email: user.email,
+      role: user.role,
+    };
+    const token = generatePasswordResetToken(payload);
+    await prisma.passwordResetToken.create({ data: { token } });
+
+    const event: IPasswordResetEvent = {
+      type: "password_reset",
+      userId: user.id,
+      email,
+      passwordResetLink: `http://${process.env.CLIENT_URL}/password-reset?token=${token}`,
+    };
+
+    await sendPasswordResetEvent(event);
+
+    return res.status(200).json({
+      message: `Password reset link sent to ${email} successfully`,
+    });
+  } catch (error) {
+    console.log(error);
+    return res.sendStatus(500);
+  }
+};
+
+const resetPassword = async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.id;
+    const { password } = req.body;
+
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user) {
+      return res.status(404).json({ error: "User does not exist" });
+    }
+
+    let passwordError;
+    if (!password || password.trim() === "") {
+      passwordError = "Password is required";
+    } else {
+      if (password.length < 8) {
+        passwordError = "Password should be a minimum of 8 digits";
+      }
+    }
+
+    if (passwordError) {
+      return res.status(400).json({ error: passwordError });
+    }
+
+    const hashedPassword = await argon2.hash(password);
+    await prisma.user.update({ where: { id: userId }, data: { password: hashedPassword } });
+
+    return res.status(200).json({ message: "Password updated successfully" });
+  } catch (error) {
+    console.log(error);
+    return res.sendStatus(500);
+  }
+};
+
 export default {
   signUp,
   signIn,
@@ -327,4 +397,6 @@ export default {
   verifyEmail,
   signOut,
   jwksEndpoint,
+  sendPasswordResetLink,
+  resetPassword
 };

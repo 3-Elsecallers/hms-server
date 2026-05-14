@@ -1,5 +1,4 @@
 import jwt from "jsonwebtoken";
-import fs from "fs";
 import * as jose from "jose";
 import "dotenv/config";
 
@@ -35,4 +34,8 @@ export const generateRefreshToken = async (payload: IUserPayload) => {
     .sign(privateKey);
 
   return jwt;
+};
+
+export const generatePasswordResetToken = (payload: IUserPayload) => {
+  return jwt.sign(payload, process.env.PASSWORD_RESET_TOKEN_SECRET!);
 };
