@@ -13,7 +13,7 @@ import { generatePasswordResetToken } from "../utils/generateToken";
 
 const signUp = async (req: Request, res: Response) => {
   try {
-    const { firstName, lastName, email, password } = req.body;
+    const { firstName, lastName, email, password, phoneNumber } = req.body;
 
     const validation = signUpValidation(req.body);
     if (!validation.valid) return res.status(400).json({ errors: validation.errors });
@@ -23,16 +23,22 @@ const signUp = async (req: Request, res: Response) => {
       return res.status(401).json({ error: "User with email exists" });
     }
 
+    const existingPhoneNumber = await prisma.user.findUnique({ where: { phoneNumber } });
+    if (existingPhoneNumber) {
+      return res.status(401).json({ error: "User with phone number exists" });
+    }
+
     const hashedPassword = await argon2.hash(password);
 
     const newUser = await prisma.user.create({
-      data: { firstName, lastName, email, password: hashedPassword }
+      data: { firstName, lastName, email, password: hashedPassword, phoneNumber, lastLogin: new Date() }
     });
 
     const payload: IUserPayload = {
       id: newUser.id,
       name: `${newUser.firstName} ${newUser.lastName}`,
       email: newUser.email,
+      emailVerified: newUser.emailVerified,
       role: newUser.role,
     };
     const accessToken = await AuthUtils.generateAccessToken(payload);
@@ -42,9 +48,10 @@ const signUp = async (req: Request, res: Response) => {
 
     await logAuditEvent({
       userId: newUser.id,
-      action: 'SIGN_UP_SUCCESSFUL',
+      action: 'SIGN_UP',
+      entityName: "User",
+      entityId: newUser.id,
       ipAddress: req.ip,
-      userAgent: req.headers['user-agent'],
     });
 
     return res.status(201).json({
@@ -68,8 +75,8 @@ const signIn = async (req: Request, res: Response) => {
     if (!user) {
       await logAuditEvent({
         action: 'SIGN_IN_FAILED',
+        entityName: "User",
         ipAddress: req.ip,
-        userAgent: req.headers['user-agent'],
       });
 
       return res.status(401).json({ error: "Invalid email or password" });
@@ -79,8 +86,8 @@ const signIn = async (req: Request, res: Response) => {
     if (!validPassword) {
       await logAuditEvent({
         action: 'SIGN_IN_FAILED',
+        entityName: "User",
         ipAddress: req.ip,
-        userAgent: req.headers['user-agent'],
       });
 
       return res.status(401).json({ error: "Invalid email or password" });
@@ -90,6 +97,7 @@ const signIn = async (req: Request, res: Response) => {
       id: user.id,
       name: `${user.firstName} ${user.lastName}`,
       email: user.email,
+      emailVerified: user.emailVerified,
       role: user.role,
     };
     const accessToken = await AuthUtils.generateAccessToken(payload);
@@ -100,8 +108,14 @@ const signIn = async (req: Request, res: Response) => {
     await logAuditEvent({
       userId: user.id,
       action: 'SIGN_IN_SUCCESSFUL',
+      entityName: "User",
+      entityId: user.id,
       ipAddress: req.ip,
-      userAgent: req.headers['user-agent'],
+    });
+
+    await prisma.user.update({
+      where: { email },
+      data: { lastLogin: new Date() }
     });
 
     return res.status(200).json({
@@ -258,8 +272,9 @@ const signOut = async (req: Request, res: Response) => {
       await logAuditEvent({
         userId: payload.id,
         action: 'SIGN_OUT_FAILED',
+        entityName: "User",
+        entityId: payload.id,
         ipAddress: req.ip,
-        userAgent: req.headers['user-agent'],
       });
 
       return res.sendStatus(404);
@@ -270,8 +285,9 @@ const signOut = async (req: Request, res: Response) => {
     await logAuditEvent({
       userId: payload.id,
       action: 'SIGN_OUT_SUCCESSFUL',
+      entityName: "User",
+      entityId: payload.id,
       ipAddress: req.ip,
-      userAgent: req.headers['user-agent'],
     });
 
     return res.sendStatus(204);
@@ -331,6 +347,7 @@ const sendPasswordResetLink = async (req: Request, res: Response) => {
       id: user.id,
       name: `${user.firstName} ${user.lastName}`,
       email: user.email,
+      emailVerified: user.emailVerified,
       role: user.role,
     };
     const token = generatePasswordResetToken(payload);

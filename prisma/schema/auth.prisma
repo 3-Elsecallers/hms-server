@@ -1,0 +1,56 @@
+enum User_Role {
+  SUPER_ADMIN
+  ADMIN
+  DOCTOR
+  NURSE
+  PATIENT
+  RECEPTIONIST
+  LAB_TECHNICIAN
+  PHARMACIST
+  ACCOUNTANT
+  GUEST
+}
+
+model User {
+  id            String    @id @default(uuid()) @db.Uuid
+  firstName     String
+  lastName      String
+  email         String    @unique
+  emailVerified Boolean   @default(false)
+  phoneNumber   String?   @unique
+  password      String
+  role          User_Role @default(GUEST)
+  isActive      Boolean   @default(true)
+  isVerified    Boolean   @default(false)
+  lastLogin     DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  roles     UserRole[]
+  staff     Staff?
+  patient   Patient?
+  auditLogs AuditLog[]
+
+  createdAppointments Appointment[] @relation("AppointmentCreator")
+}
+
+model RefreshToken {
+  id    String @id @default(uuid())
+  token String
+}
+
+model VerificationCode {
+  id        String   @id @default(uuid())
+  code      String   @unique
+  expiresAt Int      @default(dbgenerated("extract(epoch from now() + interval '5 minutes')"))
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now())
+}
+
+model PasswordResetToken {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  expiresAt Int      @default(dbgenerated("extract(epoch from now() + interval '10 minutes')"))
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now())
+}

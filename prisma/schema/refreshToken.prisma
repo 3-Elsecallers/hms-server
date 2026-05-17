@@ -1,4 +1,0 @@
-model RefreshToken {
-  id    String @id @default(uuid())
-  token String
-}

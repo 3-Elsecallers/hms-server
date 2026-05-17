@@ -1,0 +1,127 @@
+enum AppointmentStatus {
+  SCHEDULED
+  CONFIRMED
+  COMPLETED
+  CANCELLED
+  NO_SHOW
+}
+
+enum LabTestStatus {
+  ORDERED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+model DoctorSchedule {
+  id              String   @id @default(uuid()) @db.Uuid
+  doctorId        String   @db.Uuid
+  dayOfWeek       Int
+  startTime       DateTime @db.Time
+  endTime         DateTime @db.Time
+  maxAppointments Int
+
+  doctor Doctor @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+}
+
+model Appointment {
+  id              String            @id @default(uuid()) @db.Uuid
+  patientId       String            @db.Uuid
+  doctorId        String            @db.Uuid
+  appointmentDate DateTime          @db.Date
+  appointmentTime DateTime          @db.Time
+  status          AppointmentStatus
+  reason          String?
+  notes           String?
+  createdBy       String?           @db.Uuid
+  createdAt       DateTime          @default(now())
+
+  patient Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  doctor  Doctor  @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+
+  creator User? @relation("AppointmentCreator", fields: [createdBy], references: [id])
+
+  encounters Encounter[]
+
+  @@index([appointmentDate])
+}
+
+model Encounter {
+  id             String    @id @default(uuid()) @db.Uuid
+  patientId      String    @db.Uuid
+  doctorId       String    @db.Uuid
+  appointmentId  String?   @db.Uuid
+  visitType      String?
+  chiefComplaint String?
+  diagnosis      String?
+  treatmentPlan  String?
+  followUpDate   DateTime? @db.Date
+  createdAt      DateTime  @default(now())
+
+  patient Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  doctor  Doctor  @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+
+  appointment Appointment? @relation(fields: [appointmentId], references: [id])
+
+  vitals        Vital[]
+  prescriptions Prescription[]
+
+  @@index([patientId])
+}
+
+model Vital {
+  id               String   @id @default(uuid()) @db.Uuid
+  encounterId      String   @db.Uuid
+  temperature      Decimal? @db.Decimal(4, 1)
+  bloodPressure    String?
+  pulseRate        Int?
+  respiratoryRate  Int?
+  oxygenSaturation Decimal? @db.Decimal(5, 2)
+  weight           Decimal? @db.Decimal(5, 2)
+  height           Decimal? @db.Decimal(5, 2)
+  recordedBy       String?  @db.Uuid
+  createdAt        DateTime @default(now())
+
+  encounter Encounter @relation(fields: [encounterId], references: [id], onDelete: Cascade)
+
+  nurse Nurse? @relation(fields: [recordedBy], references: [id])
+}
+
+model Prescription {
+  id           String   @id @default(uuid()) @db.Uuid
+  encounterId  String   @db.Uuid
+  prescribedBy String   @db.Uuid
+  notes        String?
+  createdAt    DateTime @default(now())
+
+  encounter Encounter @relation(fields: [encounterId], references: [id], onDelete: Cascade)
+  doctor    Doctor    @relation(fields: [prescribedBy], references: [id])
+
+  items PrescriptionItem[]
+}
+
+model PrescriptionItem {
+  id             String  @id @default(uuid()) @db.Uuid
+  prescriptionId String  @db.Uuid
+  medicationName String
+  dosage         String
+  frequency      String
+  duration       String
+  instructions   String?
+
+  prescription Prescription @relation(fields: [prescriptionId], references: [id], onDelete: Cascade)
+}
+
+model LabTest {
+  id          String        @id @default(uuid()) @db.Uuid
+  patientId   String        @db.Uuid
+  orderedBy   String        @db.Uuid
+  testName    String
+  status      LabTestStatus
+  result      String?
+  performedAt DateTime?
+  createdAt   DateTime      @default(now())
+
+  patient Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  doctor  Doctor  @relation(fields: [orderedBy], references: [id])
+}

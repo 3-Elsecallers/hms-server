@@ -1,10 +1,59 @@
+// model Patient {
+//   id        String   @id @default(uuid())
+//   firstName String
+//   lastName  String
+//   birthDate DateTime
+//   gender    String
+//   // This is the bridge to openEHR
+//   ehrId     String?  @unique
+//   createdAt DateTime @default(now())
+// }
+
 model Patient {
-  id        String   @id @default(uuid())
-  firstName String
-  lastName  String
-  birthDate DateTime
-  gender    String
-  // This is the bridge to openEHR
-  ehrId     String?  @unique
-  createdAt DateTime @default(now())
+  id                    String   @id @default(uuid()) @db.Uuid
+  userId                String?  @unique @db.Uuid
+  patientNumber         String   @unique
+  firstName             String
+  lastName              String
+  gender                String
+  dateOfBirth           DateTime
+  bloodGroup            String?
+  maritalStatus         String?
+  emergencyContactName  String?
+  emergencyContactPhone String?
+  address               String?
+  insuranceProvider     String?
+  insuranceNumber       String?
+  createdAt             DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id])
+
+  allergies      PatientAllergy[]
+  medicalHistory PatientMedicalHistory[]
+  appointments   Appointment[]
+  encounters     Encounter[]
+  labTests       LabTest[]
+  admissions     Admission[]
+  invoices       Invoice[]
+}
+
+model PatientAllergy {
+  id          String  @id @default(uuid()) @db.Uuid
+  patientId   String  @db.Uuid
+  allergyName String
+  severity    String
+  notes       String?
+
+  patient Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
+}
+
+model PatientMedicalHistory {
+  id            String    @id @default(uuid()) @db.Uuid
+  patientId     String    @db.Uuid
+  conditionName String
+  diagnosisDate DateTime?
+  status        String?
+  notes         String?
+
+  patient Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
 }
