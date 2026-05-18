@@ -5,10 +5,12 @@ import "dotenv/config"
 
 import authRoutes from "./routes/auth.routes"
 import staffRoutes from "./routes/staff.routes"
-import wardRoutes from "./routes/ward.routes"
-import bedRoutes from "./routes/bed.routes"
-import departmentRoutes from "./routes/department.routes"
-import treatmentRoutes from "./routes/treatment.routes"
+import doctorRoutes from "./routes/doctor.routes"
+import nurseRoutes from "./routes/nurse.routes"
+// import wardRoutes from "./routes/ward.routes"
+// import bedRoutes from "./routes/bed.routes"
+// import departmentRoutes from "./routes/department.routes"
+// import treatmentRoutes from "./routes/treatment.routes"
 // import patientRoutes from "./routes/patient.routes"
 
 const app = express()
@@ -20,6 +22,8 @@ app.use(express.json());
 
 app.use("/api/auth", authRoutes);
 app.use("/api/staff", staffRoutes);
+app.use("/api/doctors", doctorRoutes);
+app.use("/api/nurses", nurseRoutes);
 
 // app.use("/api/wards", wardRoutes);
 // app.use("/api/beds", bedRoutes);
